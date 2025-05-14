@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>Canvas オセロゲーム</title>
+  <style>
+    body {
+      text-align: center;
+      font-family: sans-serif;
+    }
+    canvas {
+      border: 2px solid black;
+      background-color: green;
+    }
+    button {
+      margin-top: 10px;
+      padding: 8px 16px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Canvas オセロ</h1>
+  <canvas id="othelloCanvas" width="400" height="400"></canvas>
+  <p id="turn">ターン: 黒</p>
+  <p id="score">黒: 2 ／ 白: 2</p>
+  <button id="resetButton">リセット</button>
+
+  <script>
+    const canvas = document.getElementById('othelloCanvas');
+    const ctx = canvas.getContext('2d');
+    const size = 8;
+    const cellSize = canvas.width / size;
+    let board;
+    let currentPlayer;
+
+    function drawBoard() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+          ctx.strokeRect(x * cellSize, y * cellSize, cellSize, cellSize);
+          if (board[y][x]) {
+            drawDisk(x, y, board[y][x]);
+          } else if (isValidMove(x, y, currentPlayer)) {
+            drawHint(x, y);
+          }
+        }
+      }
+    }
+
+    function drawDisk(x, y, color) {
+      ctx.beginPath();
+      ctx.arc(x * cellSize + cellSize / 2, y * cellSize + cellSize / 2, cellSize / 2 - 5, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+    }
+
+    function drawHint(x, y) {
+      ctx.beginPath();
+      ctx.arc(x * cellSize + cellSize / 2, y * cellSize + cellSize / 2, 5, 0, Math.PI * 2);
+      ctx.fillStyle = 'yellow';
+      ctx.fill();
+    }
+
+    function updateScore() {
+      let black = 0;
+      let white = 0;
+      for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+          if (board[y][x] === "black") black++;
+          if (board[y][x] === "white") white++;
+        }
+      }
+      document.getElementById("score").textContent = `黒: ${black} ／ 白: ${white}`;
+    }
+
+    function initBoard() {
+      board = Array.from({ length: size }, () => Array(size).fill(""));
+      board[3][3] = board[4][4] = "white";
+      board[3][4] = board[4][3] = "black";
+      currentPlayer = "black";
+      document.getElementById("turn").textContent = `ターン: 黒`;
+      drawBoard();
+      updateScore();
+    }
+
+    function handleClick(e) {
+      const rect = canvas.getBoundingClientRect();
+      const x = Math.floor((e.clientX - rect.left) / cellSize);
+      const y = Math.floor((e.clientY - rect.top) / cellSize);
+      if (!isValidMove(x, y, currentPlayer)) return;
+      makeMove(x, y, currentPlayer);
+      currentPlayer = currentPlayer === "black" ? "white" : "black";
+      document.getElementById("turn").textContent = `ターン: ${currentPlayer === "black" ? "黒" : "白"}`;
+      drawBoard();
+      updateScore();
+    }
+
+    function isValidMove(x, y, player) {
+      if (board[y][x]) return false;
+      const opponent = player === "black" ? "white" : "black";
+      for (let [dx, dy] of directions()) {
+        let i = 1;
+        while (true) {
+          const nx = x + dx * i;
+          const ny = y + dy * i;
+          if (nx < 0 || ny < 0 || nx >= size || ny >= size) break;
+          if (i === 1 && board[ny][nx] !== opponent) break;
+          if (i > 1 && board[ny][nx] === player) return true;
+          if (!board[ny][nx]) break;
+          i++;
+        }
+      }
+      return false;
+    }
+
+    function makeMove(x, y, player) {
+      board[y][x] = player;
+      const opponent = player === "black" ? "white" : "black";
+      for (let [dx, dy] of directions()) {
+        let path = [];
+        let i = 1;
+        while (true) {
+          const nx = x + dx * i;
+          const ny = y + dy * i;
+          if (nx < 0 || ny < 0 || nx >= size || ny >= size) break;
+          if (!board[ny][nx]) break;
+          if (board[ny][nx] === player) {
+            path.forEach(([fx, fy]) => board[fy][fx] = player);
+            break;
+          }
+          path.push([nx, ny]);
+          i++;
+        }
+      }
+    }
+
+    function directions() {
+      return [[1,0], [-1,0], [0,1], [0,-1], [1,1], [1,-1], [-1,1], [-1,-1]];
+    }
+
+    document.getElementById("resetButton").addEventListener("click", initBoard);
+    canvas.addEventListener("click", handleClick);
+    initBoard();
+  </script>
+</body>
+</html>
